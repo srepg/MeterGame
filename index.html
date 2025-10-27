@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meter Guesser Game</title>
+    <title>Kac cm?</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Inter font -->
@@ -16,175 +16,197 @@
             -webkit-user-select: none;
             -ms-user-select: none;
             -moz-user-select: none;
+            overflow: hidden; /* Prevent scrolling */
         }
         
-        /* Simple ruler background */
-        #meter-area {
-            background-color: #f3f4f6; /* gray-100 */
+        #meter-area-1, #meter-area-2 {
             position: relative;
-            overflow: hidden;
+            overflow: visible; /* Allow ruler marks to show */
             touch-action: none; /* Disable panning on the meter */
         }
 
-        /* Minor tick marks - REMOVED */
-        /* #meter-area::before { ... } */
-
-        #meter-pull {
+        #meter-pull-1 {
             transition: height 0.1s linear;
         }
         
-        #meter-handle {
+        #meter-handle-1 {
             transition: bottom 0.1s linear;
             cursor: grab;
         }
 
-        #meter-handle:active {
+        #meter-handle-1:active {
             cursor: grabbing;
         }
         
         /* Target line marker */
-        #target-line {
+        #target-line-1, #target-line-2 {
             transition: bottom 0.3s ease-out;
-        }
-
-        /* Styles for the new mode switcher */
-        .game-wrapper {
-            transition: opacity 0.3s ease-in-out, max-height 0.5s ease-in-out;
-            overflow: hidden;
-        }
-        .game-wrapper.hidden-mode {
-            opacity: 0;
-            max-height: 0px;
-            pointer-events: none;
-        }
-        .game-wrapper.visible-mode {
-            opacity: 1;
-            max-height: 1000px; /* Adjust as needed, large enough for content */
         }
 
         /* Style for the new meter pull animation */
         #meter-pull-2 {
             transition: height 0.5s ease-out;
         }
-        #target-line-2 {
-            transition: bottom 0.3s ease-out;
+
+        /* Styles for new ruler marks */
+        .ruler-tick, .ruler-number {
+            position: absolute;
+            left: 100%;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            white-space: nowrap;
+        }
+        .ruler-tick {
+            width: 10px; /* Short tick */
+            height: 1px;
+            background-color: #9ca3af; /* gray-400 */
+            margin-left: 8px; /* Spacing from meter */
+        }
+        .ruler-tick.major {
+            width: 20px; /* Long tick */
+            background-color: #374151; /* gray-700 */
+        }
+        .ruler-number {
+            margin-left: 32px; /* Spacing from meter (past major tick) */
+            font-size: 10px;
+            color: #4b5563; /* gray-600 */
+            transform: translateY(50%); /* Center on the tick line */
+        }
+        /* Style for when they are shown */
+        .ruler-mark-visible {
+            opacity: 1;
         }
     </style>
 </head>
 <body class="bg-gray-900 flex items-center justify-center min-h-screen p-4 text-gray-800">
 
-    <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-4xl">
-        <h1 class="text-3xl font-bold text-center text-indigo-600 mb-4">Meter Guesser</h1>
+    <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-5xl">
+        <h1 class="text-3xl font-bold text-center text-indigo-600 mb-4">Kaç cm?</h1>
 
         <!-- Mode Switcher -->
-        <div class="flex bg-gray-100 p-1 rounded-lg mb-6">
+        <div class="flex bg-gray-100 p-1 rounded-lg mb-6 max-w-md mx-auto">
             <button id="mode-1-btn" class="flex-1 py-2 px-4 rounded-md text-sm font-medium bg-white text-indigo-600 shadow transition-all">
-                Pull to Guess
+                Çekerek Tahmin Et
             </button>
             <button id="mode-2-btn" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-700 transition-all">
-                Type to Guess
+                Yazarak Tahmin Et
             </button>
         </div>
         
-        <!-- Game 1: Pull to Guess -->
-        <div id="game-1-wrapper" class="game-wrapper visible-mode">
-            <div class="space-y-6">
-                <div class="bg-indigo-50 p-4 rounded-lg text-center">
-                    <p class="text-lg text-gray-700">Pull the tape to:</p>
-                    <p id="target-display" class="text-4xl font-bold text-indigo-700">... cm</p>
-                </div>
-
-                <!-- The Meter/Ruler Area 1 -->
-                <div id="meter-area-1" class="w-16 h-64 sm:h-80 md:h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
-                    <!-- 0cm Label -->
-                    <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
-                    <!-- 50cm Label -->
-                    <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
-
-                    <!-- The pulled tape 1 -->
-                    <div id="meter-pull-1" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
+        <!-- Main Content Area: Game | Info/Results -->
+        <div class="grid md:grid-cols-2 md:gap-8 items-start">
+            
+            <!-- Column 1: Game Meters -->
+            <div class="w-full overflow-hidden">
+                <div id="games-slider" class="flex w-full transition-transform duration-500 ease-in-out">
                     
-                    <!-- The draggable handle 1 -->
-                    <div id="meter-handle-1" class="w-20 h-6 bg-gray-700 rounded-md absolute left-1/2 -translate-x-1/2 shadow-lg z-20 border-2 border-white" style="bottom: 0;">
-                        <div class="w-6 h-1 bg-gray-400 mx-auto mt-2 rounded-full"></div>
+                    <!-- Game 1: Pull to Guess Meter -->
+                    <div id="game-1-wrapper" class="w-full flex-shrink-0">
+                        <!-- The Meter/Ruler Area 1 -->
+                        <div id="meter-area-1" class="w-16 h-64 sm:h-80 md:h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
+                            <!-- 0cm Label -->
+                            <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
+                            <!-- 50cm Label -->
+                            <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
+
+                            <!-- Container for animated ruler marks -->
+                            <div id="ruler-marks-1" class="absolute top-0 left-0 w-full h-full"></div>
+
+                            <!-- The pulled tape 1 -->
+                            <div id="meter-pull-1" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
+                            
+                            <!-- The draggable handle 1 -->
+                            <div id="meter-handle-1" class="w-20 h-6 bg-gray-700 rounded-md absolute left-1/2 -translate-x-1/2 shadow-lg z-20 border-2 border-white" style="bottom: 0;">
+                                <div class="w-6 h-1 bg-gray-400 mx-auto mt-2 rounded-full"></div>
+                            </div>
+
+                            <!-- Target Line (shown at result) 1 -->
+                            <div id="target-line-1" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
+                                <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
+                                    Target
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Target Line (shown at result) 1 -->
-                    <div id="target-line-1" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
-                        <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
-                            Target
+                    <!-- Game 2: Type to Guess Meter -->
+                    <div id="game-2-wrapper" class="w-full flex-shrink-0">
+                         <!-- The Meter/Ruler Area 2 -->
+                        <div id="meter-area-2" class="w-16 h-64 sm:h-80 md:h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
+                            <!-- 0cm Label -->
+                            <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
+                            <!-- 50cm Label -->
+                            <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
+
+                            <!-- Container for animated ruler marks -->
+                            <div id="ruler-marks-2" class="absolute top-0 left-0 w-full h-full"></div>
+
+                            <!-- The pulled tape 2 (this is the target) -->
+                            <div id="meter-pull-2" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
+                            
+                            <!-- Target Line (shown at result) 2 -->
+                            <div id="target-line-2" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
+                                <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
+                                    Target
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <p id="instructions" class="text-center text-gray-500">
-                    Click and drag the handle upwards to guess the length. Release to see your result.
-                </p>
             </div>
-        </div>
 
-        <!-- Game 2: Type to Guess -->
-        <div id="game-2-wrapper" class="game-wrapper hidden-mode">
-            <div class="space-y-6">
-                <div class="bg-indigo-50 p-4 rounded-lg text-center">
-                    <p class="text-lg text-gray-700">What's your guess for this length?</p>
+            <!-- Column 2: Info, Controls, & Results -->
+            <div class="w-full space-y-6 mt-6 md:mt-0">
+                <!-- Game 1 UI (Prompt & Instructions) -->
+                <div id="game-1-ui" class="space-y-6">
+                    <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                        <p class="text-lg text-gray-700">Hedef:</p>
+                        <p id="target-display" class="text-4xl font-bold text-indigo-700">... cm</p>
+                    </div>
+                    <p id="instructions" class="text-center text-gray-500">
+                        Tut ve yukarı doğru çek. Sonucu görmek için bırak.
+                    </p>
                 </div>
 
-                <!-- The Meter/Ruler Area 2 -->
-                <div id="meter-area-2" class="w-16 h-64 sm:h-80 md:h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
-                    <!-- 0cm Label -->
-                    <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
-                    <!-- 50cm Label -->
-                    <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
-
-                    <!-- The pulled tape 2 (this is the target) -->
-                    <div id="meter-pull-2" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
-                    
-                    <!-- Target Line (shown at result) 2 -->
-                    <div id="target-line-2" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
-                        <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
-                            Target
-                        </div>
+                <!-- Game 2 UI (Prompt & Input) -->
+                <div id="game-2-ui" class="hidden space-y-6">
+                    <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                        <p class="text-lg text-gray-700">Sence bu kaç cm?</p>
+                    </div>
+                    <!-- Guess Input Form -->
+                    <div class="flex gap-2">
+                        <input type="number" id="guess-input" class="flex-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Tahminini yaz...">
+                        <button id="submit-guess-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                            Tamam
+                        </button>
                     </div>
                 </div>
 
-                <!-- Guess Input Form -->
-                <div class="flex gap-2">
-                    <input type="number" id="guess-input" class="flex-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type guess in cm...">
-                    <button id="submit-guess-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                        Guess
+                <!-- Result Container (Shared) -->
+                <div id="result-container" class="hidden text-center space-y-4">
+                    <div id="result-message" class="p-4 rounded-lg text-xl font-bold transition-all">
+                        ...
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 text-lg">
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <span class="block text-sm font-medium text-gray-500">Hedef</span>
+                            <span id="target-result" class="font-bold text-2xl">...</span>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <span class="block text-sm font-medium text-gray-500">Tahmin</span>
+                            <span id="guess-result" class="font-bold text-2xl">...</span>
+                        </div>
+                        <div class="bg-gray-100 p-3 rounded-lg">
+                            <span class="block text-sm font-medium text-gray-500">Aradaki fark</span>
+                            <span id="diff-result" class="font-bold text-2xl">...</span>
+                        </div>
+                    </div>
+                    
+                    <button id="play-again-btn" class="w-full bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all transform hover:scale-105">
+                        Tekrar Oyna
                     </button>
                 </div>
             </div>
-        </div>
-
-        <!-- Result Container (Shared) -->
-        <div id="result-container" class="hidden text-center space-y-4 mt-6">
-            <div id="result-message" class="p-4 rounded-lg text-xl font-bold transition-all">
-                ...
-            </div>
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-lg">
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <span class="block text-sm font-medium text-gray-500">Target</span>
-                    <span id="target-result" class="font-bold text-2xl">...</span>
-                </div>
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <span class="block text-sm font-medium text-gray-500">Your Guess</span>
-                    <span id="guess-result" class="font-bold text-2xl">...</span>
-                </div>
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <span class="block text-sm font-medium text-gray-500">Difference</span>
-                    <span id="diff-result" class="font-bold text-2xl">...</span>
-                </div>
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <span class="block text-sm font-medium text-gray-500">Accuracy</span>
-                    <span id="accuracy-result" class="font-bold text-2xl">...</span>
-                </div>
-            </div>
-            
-            <button id="play-again-btn" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all transform hover:scale-105">
-                Play Again
-            </button>
         </div>
 
     </main>
@@ -194,27 +216,36 @@
         const mode1Btn = document.getElementById('mode-1-btn');
         const mode2Btn = document.getElementById('mode-2-btn');
 
-        const game1Wrapper = document.getElementById('game-1-wrapper');
-        const targetDisplay = document.getElementById('target-display');
+        const gamesSlider = document.getElementById('games-slider');
+
+        // Game 1 Meter
         const meterArea1 = document.getElementById('meter-area-1');
         const meterPull1 = document.getElementById('meter-pull-1');
         const meterHandle1 = document.getElementById('meter-handle-1');
         const targetLine1 = document.getElementById('target-line-1');
-        const instructions = document.getElementById('instructions');
-
-        const game2Wrapper = document.getElementById('game-2-wrapper');
+        const rulerMarksContainer1 = document.getElementById('ruler-marks-1');
+        
+        // Game 2 Meter
         const meterArea2 = document.getElementById('meter-area-2');
         const meterPull2 = document.getElementById('meter-pull-2');
         const targetLine2 = document.getElementById('target-line-2');
+        const rulerMarksContainer2 = document.getElementById('ruler-marks-2');
+        
+        // Column 2 UI Elements
+        const game1UI = document.getElementById('game-1-ui');
+        const targetDisplay = document.getElementById('target-display');
+        const instructions = document.getElementById('instructions');
+        
+        const game2UI = document.getElementById('game-2-ui');
         const guessInput = document.getElementById('guess-input');
         const submitGuessBtn = document.getElementById('submit-guess-btn');
 
+        // Column 2 Result Elements
         const resultContainer = document.getElementById('result-container');
         const resultMessage = document.getElementById('result-message');
         const targetResult = document.getElementById('target-result');
         const guessResult = document.getElementById('guess-result');
         const diffResult = document.getElementById('diff-result');
-        const accuracyResult = document.getElementById('accuracy-result');
         const playAgainBtn = document.getElementById('play-again-btn');
 
         // --- Game State ---
@@ -228,9 +259,7 @@
         let pixelsPerCm2 = 1; // Will be calculated
         
         // --- Constants ---
-        // Let's set the max visible length on the ruler to 50cm
         const MAX_CM_ON_RULER = 50;
-        // The ruler background px constant is removed
 
         // --- Game Logic ---
 
@@ -239,32 +268,36 @@
          */
         function switchMode(mode) {
             currentGameMode = mode;
-            resultContainer.style.display = 'none';
+            resultContainer.classList.add('hidden'); // Hide results
 
             if (mode === 1) {
-                // Show Game 1, Hide Game 2
+                // Style Switcher
                 mode1Btn.classList.add('bg-white', 'text-indigo-600', 'shadow');
                 mode1Btn.classList.remove('text-gray-700');
                 mode2Btn.classList.remove('bg-white', 'text-indigo-600', 'shadow');
                 mode2Btn.classList.add('text-gray-700');
                 
-                game1Wrapper.classList.add('visible-mode');
-                game1Wrapper.classList.remove('hidden-mode');
-                game2Wrapper.classList.add('hidden-mode');
-                game2Wrapper.classList.remove('visible-mode');
+                // Slide Meter
+                gamesSlider.style.transform = 'translateX(0%)';
+                
+                // Show/Hide UI
+                game1UI.classList.remove('hidden');
+                game2UI.classList.add('hidden');
                 
                 initGame1();
             } else {
-                // Show Game 2, Hide Game 1
+                // Style Switcher
                 mode2Btn.classList.add('bg-white', 'text-indigo-600', 'shadow');
                 mode2Btn.classList.remove('text-gray-700');
                 mode1Btn.classList.remove('bg-white', 'text-indigo-600', 'shadow');
                 mode1Btn.classList.add('text-gray-700');
 
-                game2Wrapper.classList.add('visible-mode');
-                game2Wrapper.classList.remove('hidden-mode');
-                game1Wrapper.classList.add('hidden-mode');
-                game1Wrapper.classList.remove('visible-mode');
+                // Slide Meter
+                gamesSlider.style.transform = 'translateX(-100%)';
+
+                // Show/Hide UI
+                game1UI.classList.add('hidden');
+                game2UI.classList.remove('hidden');
                 
                 initGame2();
             }
@@ -283,9 +316,12 @@
             
             // Update UI
             targetDisplay.textContent = `${targetLength} cm`;
-            resultContainer.style.display = 'none';
-            instructions.style.display = 'block';
+            resultContainer.classList.add('hidden');
+            game1UI.classList.remove('hidden');
+            game2UI.classList.add('hidden');
+            
             targetLine1.style.display = 'none';
+            clearRulerMarks(rulerMarksContainer1); // Clear ruler marks
 
             // Reset meter pull animation
             meterPull1.style.transition = 'height 0.3s ease-out';
@@ -315,8 +351,12 @@
             guessInput.value = '';
             
             // Update UI
-            resultContainer.style.display = 'none';
+            resultContainer.classList.add('hidden');
+            game1UI.classList.add('hidden');
+            game2UI.classList.remove('hidden');
+            
             targetLine2.style.display = 'none';
+            clearRulerMarks(rulerMarksContainer2); // Clear ruler marks
             
             // Get meter area dimensions
             updateGame2Dimensions();
@@ -350,6 +390,7 @@
          */
         function updateMeterPull1(pullInPixels) {
             // Ensure pull is within bounds
+            if (!meterAreaRect1) updateGame1Dimensions(); // Fallback
             const meterHeight = meterAreaRect1.height;
             const boundedPull = Math.max(0, Math.min(pullInPixels, meterHeight));
 
@@ -368,20 +409,20 @@
          * Shows the game results.
          */
         function showResult() {
-            // Hide game containers, show results
-            // Note: We don't hide the containers anymore, just show results below
-            resultContainer.style.display = 'block';
+            // Hide game-specific UI, show results
+            game1UI.classList.add('hidden');
+            game2UI.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
 
             // Calculations
             const difference = Math.abs(targetLength - currentPullCm);
-            const percentageDiff = (difference / targetLength) * 100;
 
-            // Determine result color and message
+            // Determine result color and message based on cm difference
             let colorClass, message;
-            if (percentageDiff <= 10) {
+            if (difference <= 2) {
                 message = "Excellent! Perfect pull!";
                 colorClass = 'bg-green-100 text-green-800';
-            } else if (percentageDiff <= 20) {
+            } else if (difference <= 5) {
                 message = "So close! Great try!";
                 colorClass = 'bg-orange-100 text-orange-800';
             } else {
@@ -397,13 +438,13 @@
             targetResult.textContent = `${targetLength.toFixed(1)} cm`;
             guessResult.textContent = `${currentPullCm.toFixed(1)} cm`;
             diffResult.textContent = `${difference.toFixed(1)} cm`;
-            accuracyResult.textContent = `${percentageDiff.toFixed(1)}% off`;
 
             if (currentGameMode === 1) {
                 // Show the target line on meter 1
                 const targetPixelPosition = targetLength * pixelsPerCm1;
                 targetLine1.style.bottom = `${targetPixelPosition - (targetLine1.offsetHeight / 2)}px`;
                 targetLine1.style.display = 'block';
+                createRulerMarks(rulerMarksContainer1, pixelsPerCm1); // Show ruler marks
                 
                 // Move the puller and handle to the final position
                 const finalPullPixels = currentPullCm * pixelsPerCm1;
@@ -413,15 +454,65 @@
                 const targetPixelPosition = targetLength * pixelsPerCm2;
                 targetLine2.style.bottom = `${targetPixelPosition - (targetLine2.offsetHeight / 2)}px`;
                 targetLine2.style.display = 'block';
+                createRulerMarks(rulerMarksContainer2, pixelsPerCm2); // Show ruler marks
                 // No need to move puller, it's already at target
             }
+        }
+
+        /**
+         * Creates and animates ruler tick marks and numbers.
+         * @param {HTMLElement} container - The container to add marks to.
+         * @param {number} pixelsPerCm - The pixel-to-cm ratio.
+         */
+        function createRulerMarks(container, pixelsPerCm) {
+            container.innerHTML = ''; // Clear old marks first
+            
+            // Add marks for 1cm to 49cm
+            for (let cm = 1; cm < MAX_CM_ON_RULER; cm++) {
+                const yPos = cm * pixelsPerCm;
+                
+                const tick = document.createElement('div');
+                tick.className = 'ruler-tick';
+                // Major ticks at 5, 10, 15...
+                if (cm % 5 === 0) {
+                    tick.classList.add('major');
+                }
+                tick.style.bottom = `${yPos - 1}px`; // -1 to center 1px tick
+                
+                container.appendChild(tick);
+                
+                // Add numbers for major ticks (5, 10, 15... 45)
+                if (cm % 5 === 0) { 
+                    const number = document.createElement('div');
+                    number.className = 'ruler-number';
+                    number.textContent = `${cm}`;
+                    number.style.bottom = `${yPos}px`;
+                    number.style.transform = `translateY(50%)`; // Center vertically
+                    container.appendChild(number);
+                }
+            }
+            
+            // Trigger the animation
+            setTimeout(() => {
+                container.querySelectorAll('.ruler-tick, .ruler-number').forEach(el => {
+                    el.classList.add('ruler-mark-visible');
+                });
+            }, 50); // Small delay to allow CSS to register
+        }
+
+        /**
+         * Clears all ruler marks from a container.
+         * @param {HTMLElement} container - The container to clear.
+         */
+        function clearRulerMarks(container) {
+            container.innerHTML = '';
         }
 
         // --- Event Handlers ---
 
         function onPointerDown1(e) {
             // Only start pull if it's on the handle
-            if (e.target !== meterHandle1) return;
+            if (!e.target.closest('#meter-handle-1')) return;
             
             isPulling = true;
             meterHandle1.style.cursor = 'grabbing';
