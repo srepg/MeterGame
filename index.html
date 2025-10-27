@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meter Guesser Game</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+        <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Prevent text selection while dragging */
+            user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            -moz-user-select: none;
+        }
+        
+        /* Simple ruler background */
+        #meter-area {
+            background-color: #f3f4f6; /* gray-100 */
+            position: relative;
+            overflow: hidden;
+            touch-action: none; /* Disable panning on the meter */
+        }
+
+        /* Minor tick marks - REMOVED */
+        /* #meter-area::before { ... } */
+
+        #meter-pull {
+            transition: height 0.1s linear;
+        }
+        
+        #meter-handle {
+            transition: bottom 0.1s linear;
+            cursor: grab;
+        }
+
+        #meter-handle:active {
+            cursor: grabbing;
+        }
+        
+        /* Target line marker */
+        #target-line {
+            transition: bottom 0.3s ease-out;
+        }
+
+        /* Styles for the new mode switcher */
+        .game-wrapper {
+            transition: opacity 0.3s ease-in-out, max-height 0.5s ease-in-out;
+            overflow: hidden;
+        }
+        .game-wrapper.hidden-mode {
+            opacity: 0;
+            max-height: 0px;
+            pointer-events: none;
+        }
+        .game-wrapper.visible-mode {
+            opacity: 1;
+            max-height: 500px; /* Adjust as needed, large enough for content */
+        }
+
+        /* Style for the new meter pull animation */
+        #meter-pull-2 {
+            transition: height 0.5s ease-out;
+        }
+        #target-line-2 {
+            transition: bottom 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 flex items-center justify-center min-h-screen p-4 text-gray-800">
+
+    <main class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold text-center text-indigo-600 mb-4">Meter Guesser</h1>
+
+        <!-- Mode Switcher -->
+        <div class="flex bg-gray-100 p-1 rounded-lg mb-6">
+            <button id="mode-1-btn" class="flex-1 py-2 px-4 rounded-md text-sm font-medium bg-white text-indigo-600 shadow transition-all">
+                Pull to Guess
+            </button>
+            <button id="mode-2-btn" class="flex-1 py-2 px-4 rounded-md text-sm font-medium text-gray-700 transition-all">
+                Type to Guess
+            </button>
+        </div>
+        
+        <!-- Game 1: Pull to Guess -->
+        <div id="game-1-wrapper" class="game-wrapper visible-mode">
+            <div class="space-y-6">
+                <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                    <p class="text-lg text-gray-700">Pull the tape to:</p>
+                    <p id="target-display" class="text-4xl font-bold text-indigo-700">... cm</p>
+                </div>
+
+                <!-- The Meter/Ruler Area 1 -->
+                <div id="meter-area-1" class="w-16 h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
+                    <!-- 0cm Label -->
+                    <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
+                    <!-- 50cm Label -->
+                    <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
+
+                    <!-- The pulled tape 1 -->
+                    <div id="meter-pull-1" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
+                    
+                    <!-- The draggable handle 1 -->
+                    <div id="meter-handle-1" class="w-20 h-6 bg-gray-700 rounded-md absolute left-1/2 -translate-x-1/2 shadow-lg z-20 border-2 border-white" style="bottom: 0;">
+                        <div class="w-6 h-1 bg-gray-400 mx-auto mt-2 rounded-full"></div>
+                    </div>
+
+                    <!-- Target Line (shown at result) 1 -->
+                    <div id="target-line-1" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
+                        <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
+                            Target
+                        </div>
+                    </div>
+                </div>
+
+                <p id="instructions" class="text-center text-gray-500">
+                    Click and drag the handle upwards to guess the length. Release to see your result.
+                </p>
+            </div>
+        </div>
+
+        <!-- Game 2: Type to Guess -->
+        <div id="game-2-wrapper" class="game-wrapper hidden-mode">
+            <div class="space-y-6">
+                <div class="bg-indigo-50 p-4 rounded-lg text-center">
+                    <p class="text-lg text-gray-700">What's your guess for this length?</p>
+                </div>
+
+                <!-- The Meter/Ruler Area 2 -->
+                <div id="meter-area-2" class="w-16 h-96 mx-auto rounded-lg border-2 border-gray-300 relative">
+                    <!-- 0cm Label -->
+                    <span class="absolute bottom-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">0 cm</span>
+                    <!-- 50cm Label -->
+                    <span class="absolute top-1 left-1/2 -translate-x-1/2 text-xs font-medium text-gray-500 z-0">50 cm</span>
+
+                    <!-- The pulled tape 2 (this is the target) -->
+                    <div id="meter-pull-2" class="bg-yellow-400 border-t-2 border-gray-700 absolute bottom-0 left-0 w-full z-10" style="height: 0;"></div>
+                    
+                    <!-- Target Line (shown at result) 2 -->
+                    <div id="target-line-2" class="w-full h-1 bg-green-500 absolute left-0 z-30 hidden" style="bottom: 0;">
+                        <div class="absolute left-full top-1/2 -translate-y-1/2 ml-2 bg-green-500 text-white px-2 py-0.5 rounded-md text-sm font-bold shadow-lg">
+                            Target
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guess Input Form -->
+                <div class="flex gap-2">
+                    <input type="number" id="guess-input" class="flex-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type guess in cm...">
+                    <button id="submit-guess-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                        Guess
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Container (Shared) -->
+        <div id="result-container" class="hidden text-center space-y-4 mt-6">
+            <div id="result-message" class="p-4 rounded-lg text-xl font-bold transition-all">
+                ...
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-lg">
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <span class="block text-sm font-medium text-gray-500">Target</span>
+                    <span id="target-result" class="font-bold text-2xl">...</span>
+                </div>
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <span class="block text-sm font-medium text-gray-500">Your Guess</span>
+                    <span id="guess-result" class="font-bold text-2xl">...</span>
+                </div>
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <span class="block text-sm font-medium text-gray-500">Difference</span>
+                    <span id="diff-result" class="font-bold text-2xl">...</span>
+                </div>
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <span class="block text-sm font-medium text-gray-500">Accuracy</span>
+                    <span id="accuracy-result" class="font-bold text-2xl">...</span>
+                </div>
+            </div>
+            
+            <button id="play-again-btn" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg text-lg shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50 transition-all transform hover:scale-105">
+                Play Again
+            </button>
+        </div>
+
+    </main>
+
+    <script>
+        // --- DOM Elements ---
+        const mode1Btn = document.getElementById('mode-1-btn');
+        const mode2Btn = document.getElementById('mode-2-btn');
+
+        const game1Wrapper = document.getElementById('game-1-wrapper');
+        const targetDisplay = document.getElementById('target-display');
+        const meterArea1 = document.getElementById('meter-area-1');
+        const meterPull1 = document.getElementById('meter-pull-1');
+        const meterHandle1 = document.getElementById('meter-handle-1');
+        const targetLine1 = document.getElementById('target-line-1');
+        const instructions = document.getElementById('instructions');
+
+        const game2Wrapper = document.getElementById('game-2-wrapper');
+        const meterArea2 = document.getElementById('meter-area-2');
+        const meterPull2 = document.getElementById('meter-pull-2');
+        const targetLine2 = document.getElementById('target-line-2');
+        const guessInput = document.getElementById('guess-input');
+        const submitGuessBtn = document.getElementById('submit-guess-btn');
+
+        const resultContainer = document.getElementById('result-container');
+        const resultMessage = document.getElementById('result-message');
+        const targetResult = document.getElementById('target-result');
+        const guessResult = document.getElementById('guess-result');
+        const diffResult = document.getElementById('diff-result');
+        const accuracyResult = document.getElementById('accuracy-result');
+        const playAgainBtn = document.getElementById('play-again-btn');
+
+        // --- Game State ---
+        let currentGameMode = 1;
+        let targetLength = 0; // in cm
+        let currentPullCm = 0;
+        let isPulling = false;
+        let meterAreaRect1;
+        let meterAreaRect2;
+        let pixelsPerCm1 = 1; // Will be calculated
+        let pixelsPerCm2 = 1; // Will be calculated
+        
+        // --- Constants ---
+        // Let's set the max visible length on the ruler to 50cm
+        const MAX_CM_ON_RULER = 50;
+        // The ruler background px constant is removed
+
+        // --- Game Logic ---
+
+        /**
+         * Switches between game modes.
+         */
+        function switchMode(mode) {
+            currentGameMode = mode;
+            resultContainer.style.display = 'none';
+
+            if (mode === 1) {
+                // Show Game 1, Hide Game 2
+                mode1Btn.classList.add('bg-white', 'text-indigo-600', 'shadow');
+                mode1Btn.classList.remove('text-gray-700');
+                mode2Btn.classList.remove('bg-white', 'text-indigo-600', 'shadow');
+                mode2Btn.classList.add('text-gray-700');
+                
+                game1Wrapper.classList.add('visible-mode');
+                game1Wrapper.classList.remove('hidden-mode');
+                game2Wrapper.classList.add('hidden-mode');
+                game2Wrapper.classList.remove('visible-mode');
+                
+                initGame1();
+            } else {
+                // Show Game 2, Hide Game 1
+                mode2Btn.classList.add('bg-white', 'text-indigo-600', 'shadow');
+                mode2Btn.classList.remove('text-gray-700');
+                mode1Btn.classList.remove('bg-white', 'text-indigo-600', 'shadow');
+                mode1Btn.classList.add('text-gray-700');
+
+                game2Wrapper.classList.add('visible-mode');
+                game2Wrapper.classList.remove('hidden-mode');
+                game1Wrapper.classList.add('hidden-mode');
+                game1Wrapper.classList.remove('visible-mode');
+                
+                initGame2();
+            }
+        }
+
+        /**
+         * Initializes or resets Game 1 (Pull to Guess).
+         */
+        function initGame1() {
+            // Generate random target length from 1 to 50
+            targetLength = Math.floor(Math.random() * 50) + 1;
+            
+            // Reset state
+            currentPullCm = 0;
+            isPulling = false;
+            
+            // Update UI
+            targetDisplay.textContent = `${targetLength} cm`;
+            resultContainer.style.display = 'none';
+            instructions.style.display = 'block';
+            targetLine1.style.display = 'none';
+
+            // Reset meter pull animation
+            meterPull1.style.transition = 'height 0.3s ease-out';
+            meterHandle1.style.transition = 'bottom 0.3s ease-out';
+            
+            updateMeterPull1(0); // Animate back to 0
+            
+            // After animation, remove transition for smooth dragging
+            setTimeout(() => {
+                meterPull1.style.transition = 'none';
+                meterHandle1.style.transition = 'none';
+            }, 300);
+
+            // Get meter area dimensions
+            updateGame1Dimensions();
+        }
+
+        /**
+         * Initializes or resets Game 2 (Type to Guess).
+         */
+        function initGame2() {
+            // Generate random target length from 1 to 50
+            targetLength = Math.floor(Math.random() * 50) + 1;
+            
+            // Reset state
+            currentPullCm = 0;
+            guessInput.value = '';
+            
+            // Update UI
+            resultContainer.style.display = 'none';
+            targetLine2.style.display = 'none';
+            
+            // Get meter area dimensions
+            updateGame2Dimensions();
+
+            // Set the visual pull meter
+            const targetPullPixels = targetLength * pixelsPerCm2;
+            meterPull2.style.height = `${targetPullPixels}px`;
+        }
+
+        /**
+         * Calculates and stores Game 1's meter dimensions.
+         */
+        function updateGame1Dimensions() {
+            meterAreaRect1 = meterArea1.getBoundingClientRect();
+            // Calculate pixels per cm based on the ruler's height
+            pixelsPerCm1 = meterAreaRect1.height / MAX_CM_ON_RULER;
+        }
+
+        /**
+         * Calculates and stores Game 2's meter dimensions.
+         */
+        function updateGame2Dimensions() {
+            meterAreaRect2 = meterArea2.getBoundingClientRect();
+            // Calculate pixels per cm based on the ruler's height
+            pixelsPerCm2 = meterAreaRect2.height / MAX_CM_ON_RULER;
+        }
+
+        /**
+         * Updates the visual pull for Game 1.
+         * @param {number} pullInPixels - The current pull distance in pixels.
+         */
+        function updateMeterPull1(pullInPixels) {
+            // Ensure pull is within bounds
+            const meterHeight = meterAreaRect1.height;
+            const boundedPull = Math.max(0, Math.min(pullInPixels, meterHeight));
+
+            // Update the pull bar height
+            meterPull1.style.height = `${boundedPull}px`;
+            
+            // Update the handle position (center of handle at end of pull)
+            const handleHeight = meterHandle1.offsetHeight;
+            meterHandle1.style.bottom = `${boundedPull - (handleHeight / 2)}px`;
+
+            // Store the current centimeter value
+            currentPullCm = boundedPull / pixelsPerCm1;
+        }
+        
+        /**
+         * Shows the game results.
+         */
+        function showResult() {
+            // Hide game containers, show results
+            // Note: We don't hide the containers anymore, just show results below
+            resultContainer.style.display = 'block';
+
+            // Calculations
+            const difference = Math.abs(targetLength - currentPullCm);
+            const percentageDiff = (difference / targetLength) * 100;
+
+            // Determine result color and message
+            let colorClass, message;
+            if (percentageDiff <= 10) {
+                message = "Excellent! Perfect pull!";
+                colorClass = 'bg-green-100 text-green-800';
+            } else if (percentageDiff <= 20) {
+                message = "So close! Great try!";
+                colorClass = 'bg-orange-100 text-orange-800';
+            } else {
+                message = "Not quite! Try again.";
+                colorClass = 'bg-red-100 text-red-800';
+            }
+
+            // Update result message
+            resultMessage.textContent = message;
+            resultMessage.className = `p-4 rounded-lg text-xl font-bold ${colorClass}`;
+            
+            // Update result details
+            targetResult.textContent = `${targetLength.toFixed(1)} cm`;
+            guessResult.textContent = `${currentPullCm.toFixed(1)} cm`;
+            diffResult.textContent = `${difference.toFixed(1)} cm`;
+            accuracyResult.textContent = `${percentageDiff.toFixed(1)}% off`;
+
+            if (currentGameMode === 1) {
+                // Show the target line on meter 1
+                const targetPixelPosition = targetLength * pixelsPerCm1;
+                targetLine1.style.bottom = `${targetPixelPosition - (targetLine1.offsetHeight / 2)}px`;
+                targetLine1.style.display = 'block';
+                
+                // Move the puller and handle to the final position
+                const finalPullPixels = currentPullCm * pixelsPerCm1;
+                updateMeterPull1(finalPullPixels);
+            } else {
+                // Show the target line on meter 2
+                const targetPixelPosition = targetLength * pixelsPerCm2;
+                targetLine2.style.bottom = `${targetPixelPosition - (targetLine2.offsetHeight / 2)}px`;
+                targetLine2.style.display = 'block';
+                // No need to move puller, it's already at target
+            }
+        }
+
+        // --- Event Handlers ---
+
+        function onPointerDown1(e) {
+            // Only start pull if it's on the handle
+            if (e.target !== meterHandle1) return;
+            
+            isPulling = true;
+            meterHandle1.style.cursor = 'grabbing';
+            
+            // Ensure dimensions are up-to-date
+            updateGame1Dimensions();
+            
+            // Remove transitions for smooth dragging
+            meterPull1.style.transition = 'none';
+            meterHandle1.style.transition = 'none';
+            
+            // Add listeners to the whole window to track movement anywhere
+            window.addEventListener('pointermove', onPointerMove1);
+            window.addEventListener('pointerup', onPointerUp1);
+            
+            // Prevent default touch behaviors
+            e.preventDefault();
+        }
+
+        function onPointerMove1(e) {
+            if (!isPulling) return;
+            
+            // Calculate pull distance from the bottom of the meter area
+            const pullInPixels = meterAreaRect1.bottom - e.clientY;
+            updateMeterPull1(pullInPixels);
+            
+            // Prevent default touch behaviors
+            e.preventDefault();
+        }
+
+        function onPointerUp1(e) {
+            if (!isPulling) return;
+            
+            isPulling = false;
+            meterHandle1.style.cursor = 'grab';
+            
+            // Remove window listeners
+            window.removeEventListener('pointermove', onPointerMove1);
+            window.removeEventListener('pointerup', onPointerUp1);
+            
+            // Show the results
+            showResult();
+            
+            e.preventDefault();
+        }
+
+        function onSubmitGuess() {
+            currentPullCm = parseFloat(guessInput.value) || 0;
+            if (currentPullCm <= 0) {
+                // Simple validation
+                guessInput.classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => guessInput.classList.remove('ring-2', 'ring-red-500'), 1000);
+                return;
+            }
+            showResult();
+        }
+
+        // --- Event Listeners ---
+        
+        // Mode Switchers
+        mode1Btn.addEventListener('click', () => switchMode(1));
+        mode2Btn.addEventListener('click', () => switchMode(2));
+
+        // Game 1 Listeners
+        meterArea1.addEventListener('pointerdown', onPointerDown1);
+        
+        // Game 2 Listeners
+        submitGuessBtn.addEventListener('click', onSubmitGuess);
+        guessInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') onSubmitGuess();
+        });
+
+        // Shared Listeners
+        playAgainBtn.addEventListener('click', () => {
+            if (currentGameMode === 1) initGame1();
+            else initGame2();
+        });
+        
+        // Recalculate dimensions on window resize
+        window.addEventListener('resize', () => {
+            updateGame1Dimensions();
+            updateGame2Dimensions();
+        });
+        
+        // Start the game on load
+        window.addEventListener('load', () => {
+            switchMode(1); // Start on game 1
+            updateGame2Dimensions(); // Also pre-calculate game 2 dimensions
+        });
+        
+    </script>
+</body>
+</html>
+
